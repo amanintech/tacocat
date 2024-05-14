@@ -25,6 +25,9 @@ jobs:
         with:
           terraform_version: "1.8.3"
           # Run Terraform init
+      - name: 🔍 Check State
+        id: check
+        run: terraform state list
       - name: 🏁 Terraform Init
         id: init
         run: terraform init -backend-config="key=prod.tfstate"
