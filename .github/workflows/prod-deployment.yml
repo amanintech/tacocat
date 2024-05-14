@@ -27,7 +27,7 @@ jobs:
           # Run Terraform init
       - name: 🏁 Terraform Init
         id: init
-        run: terraform init -backend-config="key=prod.tfstate"v
+        run: terraform init -backend-config="key=prod.tfstate"
           # Run Terraform apply
       - name: 👍🏻 Terraform Apply
         id: apply
