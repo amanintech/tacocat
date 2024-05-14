@@ -1,0 +1,43 @@
+# Runs on push to feature branches and main
+name: 'Deploy Production on Push to Main'
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  terraform:
+    name: 'Terraform Apply on Push'
+    runs-on: ubuntu-latest
+
+    # Use the Bash shell
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: ✅ Checkout
+        uses: actions/checkout@v3
+          # Install the preferred version of Terraform CLI
+      - name: 🛠️ Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.8.3"
+          # Run Terraform init
+      - name: 🏁 Terraform Init
+        id: init
+        run: terraform init -backend-config="key=prod.tfstate"v
+          # Run Terraform apply
+      - name: 👍🏻 Terraform Apply
+        id: apply
+        run: terraform apply -var-file="prod.tfvars" -auto-approve
+
+env:
+  TF_LOG: INFO
+  TF_INPUT: false
+  TF_IN_AUTOMATION: true
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
