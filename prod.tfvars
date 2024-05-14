@@ -1,6 +1,6 @@
 prefix        = "taco"
 location      = "eastus"
 environment   = "production"
-project       = "tacocat-beta"
+project       = "tacocat-rc"
 address_space = "10.42.0.0/16"
 subnet_prefix = "10.42.0.0/24"
