@@ -1,0 +1,92 @@
+# Runs on PR to main
+name: 'Plan Production on PR to Main'
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+env:
+  TF_LOG: INFO
+  TF_INPUT: false
+  TF_IN_AUTOMATION: true
+  ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+  ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+
+jobs:
+  terraform:
+    name: 'Terraform Validate and Plan on PR'
+    runs-on: ubuntu-latest
+
+    # Use the Bash shell
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    # Install the preferred version of Terraform CLI
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: "1.8.3"
+
+    # Run Terraform init
+    - name: Terraform Init
+      id: init
+      run: terraform init -backend-config="key=prod.tfstate"
+
+    # Run a Terraform fmt
+    - name: Terraform format
+      id: fmt
+      run: terraform fmt -check
+
+    # Run a Terraform validate
+    - name: Terraform validate
+      id: validate
+      # Run validate even if fmt fails
+      if: success() || failure()
+      run: terraform validate -no-color
+
+        # Run a Terraform plan
+    - name: Terraform plan
+      id: plan
+      run: terraform plan -var-file="prod.tfvars"
+
+    # Add a comment to pull requests with plan results weeeeeee
+    - name: Add Plan Comment
+      id: comment
+      uses: actions/github-script@v6
+      env:
+        PLAN: "terraform\n${{ steps.plan.outputs.stdout }}"
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+          #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+          #### Terraform Validation 🤖${{ steps.validate.outputs.stdout }}
+          #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+          <details><summary>Show Plan</summary>
+
+          \`\`\`${process.env.PLAN}\`\`\`
+
+          </details>
+
+          *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Working Directory: \`${{ env.tf_actions_working_dir }}\`, Workflow: \`${{ github.workflow }}\`*`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })
